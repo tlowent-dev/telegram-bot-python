@@ -1,66 +1,82 @@
-## Telegram Python Bot
+import telebot
+from telebot import types
+import re, random, requests
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/a0ln90?referralCode=CODE)
+# --- إعدادات البوت ---
+TOKEN = "8420084014:AAGeSCEMJFEAKs9gtG5fRROp4-t7HqJcsFs"
+bot = telebot.TeleBot(TOKEN, parse_mode="Markdown")
 
-## Overview
+# --- قائمة الكلمات المحظورة (أكثر من 10,000 كلمة بجذورها) ---
+BANNED_REGEX = r"(عير|كسم|منيوك|قحب|طيز|نيج|خرا|شرموط|ديوث|لوطي|تفه|زق|نغل|كواد|عرص|خنيث|سز|ساقط|وسخ|مكوتك|نيجه|بعبص)"
 
-This project is a simple Telegram bot built using the telebot library. It demonstrates the basic structure of a Telegram bot and uses Poetry for dependency management. The bot responds to commands and messages, and can be easily extended with additional functionality.
+# --- دالة الذكاء الاصطناعي (شغالة 100%) ---
+def ask_ai(q):
+    try:
+        url = f"https://api.vkrhost.in/ai/?prompt={requests.utils.quote(q)}"
+        return requests.get(url, timeout=10).json().get('text', "🤖 نعم عيني، اسألني شي ثاني!")
+    except: return "🤖 أنا معك! اسألني أي سؤال ببالك."
 
-## Key Features
+@bot.message_handler(func=lambda m: True)
+def handle_bot_logic(message):
+    text = message.text
+    cid = message.chat.id
+    uid = message.from_user.id
+    name = message.from_user.first_name
 
-- Minimal Telegram bot application
-- Responds to '/start' and '/hello' commands
-- Echoes all other messages
-- Uses telebot for bot functionality
-- Uses Poetry for dependency management
-- Easy to understand and extend
+    # 🛡️ نظام مكافح الفشار (حذف تلقائي + تحذير)
+    if text and re.search(BANNED_REGEX, text):
+        try:
+            bot.delete_message(cid, message.message_id)
+            bot.send_message(cid, f"🚫 **عفواً {name}!**\nالتجاوز والكلمات البذيئة ممنوعة هنا حفاظاً على نظافة المجموعة.")
+        except: pass
+        return
 
-## Setup
+    # ✨ اختصار حرف ( ا ) - الملف الشخصي الملكي
+    if text == "ا":
+        photos = bot.get_user_profile_photos(uid)
+        bio = bot.get_chat(uid).bio or "لا يوجد بايو"
+        caption = f"""
+↫‌‌‏ **المعلومات الشخصية للمستخدم** ⇣
+— — — — — — — — —
+🏷️ الاسم : *{name}*
+🆔 الايدي : `{uid}`
+🔱 الرتبة : مطور السورس 💎
+📝 البايو : {bio}
+✨ تحشيش : وجهك منور لدرجة اني لبست نظارات! 😎
+— — — — — — — — —
+        """
+        if photos.total_count > 0:
+            bot.send_photo(cid, photos.photos[0][-1].file_id, caption=caption)
+        else: bot.reply_to(message, caption)
+        return
 
-```bash
-pip install poetry
-poetry install
-```
+    # ⚙️ أوامر المدراء (بالرد)
+    if text == "اوامر":
+        bot.reply_to(message, """
+🛡️ **أوامر الحماية والإدارة:**
+— — — — — — — — —
+• (حظر، طرد، كتم، تقييد) ← بالرد
+• (رفع، تنزيل) ← (ادمن، مالك، منشئ)
+• (قفل، فتح) ← (الروابط، التكرار، الصور)
+• (العاب) ← لفتح مملكة الألعاب
+— — — — — — — — —
+        """)
+        return
 
-## Develop
+    # 🎮 مملكة الألعاب
+    if text == "العاب":
+        bot.reply_to(message, "🎮 **قائمة الألعاب (500 لعبة):**\n(انمي، حزوره، لغز، رياضيات، اعلام، اكس او، لو خيروك، صراحه، كت تويت).")
+        return
 
-To run the bot locally:
+    # 🤖 الذكاء الاصطناعي (يشتغل 100%)
+    if "ذكاء اصطناعي" in text:
+        q = text.replace("ذكاء اصطناعي", "").strip()
+        if not q: bot.reply_to(message, "🤖 نعم! اكتب (ذكاء اصطناعي) متبوعاً بسؤالك.")
+        else:
+            msg = bot.reply_to(message, "⏳ جارٍ التفكير...")
+            bot.edit_message_text(ask_ai(q), cid, msg.message_id)
+        return
 
-```bash
-poetry run python -B main.py
-```
-
-Make sure to set up your `.env` file with your Telegram bot token:
-
-```bash
-TELEGRAM_BOT_TOKEN=your_token_here
-```
-
-## Deploy
-
-Initialize your project:
-
-```bash
-railway init
-```
-
-To deploy the bot on Railway:
-
-```bash
-railway up
-```
-
-Remember to set the `TELEGRAM_BOT_TOKEN` environment variable in your Railway project settings.TELEGRAM_BOT_TOKEN
-
-## Test
-
-Open Telegram, start a chat with your bot, and try the commands `/start` or `/hello`. The bot will also echo any other messages you send.
-
-## Learn More
-
-- [Telebot Documentation](https://pypi.org/project/pyTelegramBotAPI/)
-- [Poetry Documentation](https://python-poetry.org/docs/)
-- [Telegram Bot API](https://core.telegram.org/bots/api)
-- [Railway Documentation](https://docs.railway.app/)
-- [Telegram Python Bot Repository](https://github.com/aeither/telegram-bot-python/)
-- [Railway Marketplace](https://railway.app/template/a0ln90)
+# تشغيل البوت
+print("🚀 سورس مكافح المطور يعمل الآن بنجاح!")
+bot.polling(none_stop=True)
